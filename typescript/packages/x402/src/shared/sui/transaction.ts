@@ -1,6 +1,7 @@
 import { Transaction } from "@mysten/sui/transactions";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { fromBase64, toBase64 } from "@mysten/sui/utils";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { SuiAbstractSigner, SuiSigner } from "./wallet";
 import { SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
 
 /**
@@ -49,24 +50,38 @@ export function getSenderFromTransaction(transaction: Transaction): string {
 }
 
 /**
- * Sign a transaction with a keypair.
+ * Signs a transaction using the provided signer.
  *
- * @param signer - The Ed25519Keypair that will sign the transaction
+ * @param signer - The signer that will sign the transaction
  * @param transaction - The transaction to sign
- * @returns The signed transaction with signature
+ * @returns The signed transaction with signature and transaction bytes
  */
-export async function signTransactionWithSigner(
-  signer: Ed25519Keypair,
+export async function signTransactionWithSigner<TSigner extends SuiSigner>(
+  signer: TSigner,
   transaction: Transaction,
 ): Promise<{ signature: string; transactionBytes: string }> {
   try {
     // Build the transaction to get the bytes
     const transactionBytes = await transaction.build({
-      client: undefined as any, // We'll handle this in the calling context
+      client: undefined as unknown as SuiJsonRpcClient,
     });
 
     // Sign the transaction bytes
-    const signatureResult = await signer.signTransaction(transactionBytes);
+    let signatureResult: { signature: string; bytes: string };
+
+    if (
+      "signTransaction" in signer &&
+      typeof (signer as SuiAbstractSigner).signTransaction === "function"
+    ) {
+      signatureResult = await (signer as SuiAbstractSigner).signTransaction(transaction);
+    } else if (
+      ("signMessage" in signer || "signPersonalMessage" in signer) &&
+      "signTransaction" in signer
+    ) {
+      signatureResult = await (signer as Ed25519Keypair).signTransaction(transactionBytes);
+    } else {
+      throw new Error("Signer does not support signing");
+    }
 
     return {
       signature: signatureResult.signature,
@@ -85,7 +100,10 @@ export async function signTransactionWithSigner(
  * @param rpc - The RPC client to use for simulation
  * @returns The transaction simulation result
  */
-export async function simulateTransaction(transaction: Transaction, rpc: SuiJsonRpcClient) {
+export async function simulateTransaction(
+  transaction: Transaction,
+  rpc: SuiJsonRpcClient,
+): Promise<Record<string, unknown>> {
   try {
     // Build the transaction
     const transactionBytes = await transaction.build({
@@ -97,7 +115,7 @@ export async function simulateTransaction(transaction: Transaction, rpc: SuiJson
       transactionBlock: toBase64(transactionBytes),
     });
 
-    return simulateResult;
+    return simulateResult as unknown as Record<string, unknown>;
   } catch (error) {
     console.error("error simulating transaction", error);
     throw new Error("transaction_simulation_failed");
@@ -110,13 +128,17 @@ export async function simulateTransaction(transaction: Transaction, rpc: SuiJson
  * @param signer - The signer that will sign the transaction
  * @param transaction - The transaction to sign and simulate
  * @param rpc - The RPC client to use to simulate the transaction
- * @returns The transaction simulation result
+ * @returns The transaction simulation result with signature and transaction bytes
  */
-export async function signAndSimulateTransaction(
-  signer: Ed25519Keypair,
+export async function signAndSimulateTransaction<TSigner extends SuiSigner>(
+  signer: TSigner,
   transaction: Transaction,
   rpc: SuiJsonRpcClient,
-) {
+): Promise<{
+  simulateResult: Record<string, unknown>;
+  signature: string;
+  transactionBytes: string;
+}> {
   // First simulate the transaction to verify it will succeed
   const simulateResult = await simulateTransaction(transaction, rpc);
 
@@ -189,14 +211,20 @@ export async function verifyTransactionSignature(
  * Encode a transaction to base64 string.
  *
  * @param transaction - The transaction to encode
+ * @param rpc - The RPC client to use for building the transaction
  * @returns Base64 encoded transaction
  */
 export async function encodeTransaction(
   transaction: Transaction,
   rpc: SuiJsonRpcClient,
 ): Promise<string> {
-  const transactionBytes = await transaction.build({
-    client: rpc,
-  });
-  return toBase64(transactionBytes);
+  try {
+    const transactionBytes = await transaction.build({
+      client: rpc,
+    });
+    return toBase64(transactionBytes);
+  } catch (error) {
+    console.error("error encoding transaction", error);
+    throw error;
+  }
 }

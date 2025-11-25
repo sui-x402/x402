@@ -3,7 +3,6 @@ import { Keypair } from "@mysten/sui/cryptography";
 import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import { getRpcClient } from "./rpc";
 import { Network, SupportedSUINetworks } from "../../types/shared";
-export type { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 

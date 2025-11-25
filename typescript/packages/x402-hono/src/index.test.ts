@@ -168,9 +168,30 @@ describe("paymentMiddleware()", () => {
     mockNext = vi.fn();
     mockVerify = vi.fn() as ReturnType<typeof useFacilitator>["verify"];
     mockSettle = vi.fn() as ReturnType<typeof useFacilitator>["settle"];
+    mockSupported = vi.fn().mockResolvedValue({
+      kinds: [
+        {
+          scheme: "exact",
+          network: "sui",
+          asset: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+          extra: {
+            feePayer: "0xfeepayeraddress1234567890123456789012345678901234567890",
+          },
+        },
+        {
+          scheme: "exact",
+          network: "sui-testnet",
+          asset: "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
+          extra: {
+            feePayer: "0xfeepayeraddress1234567890123456789012345678901234567890",
+          },
+        },
+      ],
+    }) as ReturnType<typeof useFacilitator>["supported"];
     (useFacilitator as ReturnType<typeof vi.fn>).mockReturnValue({
       verify: mockVerify,
       settle: mockSettle,
+      supported: mockSupported,
     });
     (getPaywallHtml as ReturnType<typeof vi.fn>).mockReturnValue("<html>Paywall</html>");
 
@@ -384,6 +405,7 @@ describe("paymentMiddleware()", () => {
 
     expect(mockContext.json).toHaveBeenCalledWith(
       expect.objectContaining({
+        error: "X-PAYMENT header is required",
         accepts: expect.arrayContaining([
           expect.objectContaining({
             network: "sui",
@@ -423,11 +445,12 @@ describe("paymentMiddleware()", () => {
 
     expect(mockContext.json).toHaveBeenCalledWith(
       expect.objectContaining({
+        error: "X-PAYMENT header is required",
         accepts: expect.arrayContaining([
           expect.objectContaining({
             network: "sui-testnet",
             payTo: suiPayTo,
-            asset: "0xa1906aedd654b101e676c58029480970f1677376f2d394374117a05034038753::usdc::USDC",
+            asset: "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
           }),
         ]),
         x402Version: 1,

@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Transaction } from "@mysten/sui/transactions";
 import { toBase64 } from "@mysten/sui/utils";
 import {
@@ -7,8 +8,6 @@ import {
   signTransactionWithSigner,
   simulateTransaction,
   signAndSimulateTransaction,
-  verifyTransactionSignature,
-  encodeTransaction,
   type ExactSuiPayload,
 } from "./transaction";
 
@@ -24,7 +23,12 @@ describe("decodeTransactionFromPayload", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("should decode a valid transaction from payload", () => {
+    // Arrange
     const mockTransaction = {
       getData: vi.fn().mockReturnValue({ sender: "0x123" }),
     };
@@ -35,13 +39,16 @@ describe("decodeTransactionFromPayload", () => {
       txData: toBase64(new Uint8Array([1, 2, 3, 4])),
     };
 
+    // Act
     const result = decodeTransactionFromPayload(payload);
 
+    // Assert
     expect(Transaction.from).toHaveBeenCalled();
     expect(result).toBe(mockTransaction);
   });
 
   it("should throw an error for invalid transaction data", () => {
+    // Arrange
     vi.mocked(Transaction.from).mockImplementation(() => {
       throw new Error("Invalid transaction");
     });
@@ -51,6 +58,7 @@ describe("decodeTransactionFromPayload", () => {
       txData: "invalid_base64",
     };
 
+    // Act & Assert
     expect(() => decodeTransactionFromPayload(payload)).toThrow(
       "invalid_exact_sui_payload_transaction",
     );
@@ -58,48 +66,74 @@ describe("decodeTransactionFromPayload", () => {
 });
 
 describe("getSenderFromTransaction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("should extract sender address from transaction", () => {
+    // Arrange
     const mockTransaction = {
       getData: vi.fn().mockReturnValue({
         sender: "0x1234567890abcdef",
       }),
     } as any;
 
+    // Act
     const result = getSenderFromTransaction(mockTransaction);
 
+    // Assert
     expect(result).toBe("0x1234567890abcdef");
     expect(mockTransaction.getData).toHaveBeenCalled();
   });
 
   it("should return empty string when sender is missing", () => {
+    // Arrange
     const mockTransaction = {
       getData: vi.fn().mockReturnValue({}),
     } as any;
 
+    // Act
     const result = getSenderFromTransaction(mockTransaction);
 
+    // Assert
     expect(result).toBe("");
   });
 
   it("should return empty string on error", () => {
+    // Arrange
     const mockTransaction = {
       getData: vi.fn().mockImplementation(() => {
         throw new Error("Failed to get data");
       }),
     } as any;
 
+    // Act
     const result = getSenderFromTransaction(mockTransaction);
 
+    // Assert
     expect(result).toBe("");
   });
 });
 
 describe("signTransactionWithSigner", () => {
-  it("should sign transaction and return signature with transaction bytes", async () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should sign transaction with SuiAbstractSigner", async () => {
+    // Arrange
     const mockSigner = {
       signTransaction: vi.fn().mockResolvedValue({
         signature: "mockBase64Signature",
-        bytes: new Uint8Array([5, 6, 7, 8]),
+        bytes: "mockBase64Bytes",
       }),
     } as any;
 
@@ -107,16 +141,44 @@ describe("signTransactionWithSigner", () => {
       build: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4])),
     } as any;
 
+    // Act
     const result = await signTransactionWithSigner(mockSigner, mockTransaction);
 
+    // Assert
+    expect(mockTransaction.build).toHaveBeenCalled();
+    expect(mockSigner.signTransaction).toHaveBeenCalledWith(mockTransaction);
+    expect(result).toEqual({
+      signature: "mockBase64Signature",
+      transactionBytes: expect.any(String),
+    });
+  });
+
+  it("should sign transaction with Ed25519Keypair", async () => {
+    // Arrange
+    const mockSigner = {
+      signMessage: vi.fn(),
+      signTransaction: vi.fn().mockResolvedValue({
+        signature: "mockSignature",
+        bytes: "mockBytes",
+      }),
+    } as any;
+
+    const mockTransaction = {
+      build: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4])),
+    } as any;
+
+    // Act
+    const result = await signTransactionWithSigner(mockSigner, mockTransaction);
+
+    // Assert
     expect(mockTransaction.build).toHaveBeenCalled();
     expect(mockSigner.signTransaction).toHaveBeenCalled();
     expect(result).toHaveProperty("signature");
     expect(result).toHaveProperty("transactionBytes");
-    expect(result.signature).toBe("mockBase64Signature");
   });
 
   it("should throw error when signing fails", async () => {
+    // Arrange
     const mockSigner = {
       signTransaction: vi.fn().mockRejectedValue(new Error("Signing failed")),
     } as any;
@@ -125,6 +187,21 @@ describe("signTransactionWithSigner", () => {
       build: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4])),
     } as any;
 
+    // Act & Assert
+    await expect(signTransactionWithSigner(mockSigner, mockTransaction)).rejects.toThrow(
+      "failed_to_sign_transaction",
+    );
+  });
+
+  it("should throw error when signer does not support signing", async () => {
+    // Arrange
+    const mockSigner = {} as any;
+
+    const mockTransaction = {
+      build: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4])),
+    } as any;
+
+    // Act & Assert
     await expect(signTransactionWithSigner(mockSigner, mockTransaction)).rejects.toThrow(
       "failed_to_sign_transaction",
     );
@@ -132,25 +209,39 @@ describe("signTransactionWithSigner", () => {
 });
 
 describe("simulateTransaction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("should simulate transaction successfully", async () => {
+    // Arrange
+    const mockSimulateResult = {
+      effects: { status: { status: "success" } },
+    };
+
     const mockRpc = {
-      dryRunTransactionBlock: vi.fn().mockResolvedValue({
-        effects: { status: { status: "success" } },
-      }),
+      dryRunTransactionBlock: vi.fn().mockResolvedValue(mockSimulateResult),
     } as any;
 
     const mockTransaction = {
       build: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4])),
     } as any;
 
+    // Act
     const result = await simulateTransaction(mockTransaction, mockRpc);
 
+    // Assert
     expect(mockTransaction.build).toHaveBeenCalledWith({ client: mockRpc });
     expect(mockRpc.dryRunTransactionBlock).toHaveBeenCalled();
-    expect(result).toHaveProperty("effects");
+    expect(result).toEqual(mockSimulateResult);
   });
 
   it("should throw error when simulation fails", async () => {
+    // Arrange
     const mockRpc = {
       dryRunTransactionBlock: vi.fn().mockRejectedValue(new Error("Simulation failed")),
     } as any;
@@ -159,6 +250,7 @@ describe("simulateTransaction", () => {
       build: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4])),
     } as any;
 
+    // Act & Assert
     await expect(simulateTransaction(mockTransaction, mockRpc)).rejects.toThrow(
       "transaction_simulation_failed",
     );
@@ -166,17 +258,28 @@ describe("simulateTransaction", () => {
 });
 
 describe("signAndSimulateTransaction", () => {
-  it("should simulate and sign transaction", async () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should simulate and then sign transaction", async () => {
+    // Arrange
+    const mockSimulateResult = {
+      effects: { status: { status: "success" } },
+    };
+
     const mockRpc = {
-      dryRunTransactionBlock: vi.fn().mockResolvedValue({
-        effects: { status: { status: "success" } },
-      }),
+      dryRunTransactionBlock: vi.fn().mockResolvedValue(mockSimulateResult),
     } as any;
 
     const mockSigner = {
       signTransaction: vi.fn().mockResolvedValue({
         signature: "mockSignature",
-        bytes: new Uint8Array([5, 6, 7, 8]),
+        bytes: "mockBytes",
       }),
     } as any;
 
@@ -184,72 +287,36 @@ describe("signAndSimulateTransaction", () => {
       build: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4])),
     } as any;
 
+    // Act
     const result = await signAndSimulateTransaction(mockSigner, mockTransaction, mockRpc);
 
-    expect(result).toHaveProperty("simulateResult");
-    expect(result).toHaveProperty("signature");
-    expect(result).toHaveProperty("transactionBytes");
-  });
-});
-
-describe("verifyTransactionSignature", () => {
-  it("should return false for invalid signature length", async () => {
-    const payload: ExactSuiPayload = {
-      signature: toBase64(new Uint8Array(50)), // Too short
-      txData: toBase64(new Uint8Array([1, 2, 3, 4])),
-    };
-
-    const result = await verifyTransactionSignature(payload, "0x123");
-
-    expect(result).toBe(false);
+    // Assert
+    expect(mockRpc.dryRunTransactionBlock).toHaveBeenCalled();
+    expect(mockSigner.signTransaction).toHaveBeenCalled();
+    expect(result).toEqual({
+      simulateResult: mockSimulateResult,
+      signature: "mockSignature",
+      transactionBytes: expect.any(String),
+    });
   });
 
-  it("should return false for unsupported signature scheme", async () => {
-    const signatureBytes = new Uint8Array(97);
-    signatureBytes[0] = 0x01; // Invalid scheme flag (not Ed25519)
+  it("should propagate simulation errors", async () => {
+    // Arrange
+    const mockRpc = {
+      dryRunTransactionBlock: vi.fn().mockRejectedValue(new Error("RPC error")),
+    } as any;
 
-    const payload: ExactSuiPayload = {
-      signature: toBase64(signatureBytes),
-      txData: toBase64(new Uint8Array([1, 2, 3, 4])),
-    };
+    const mockSigner = {
+      signTransaction: vi.fn(),
+    } as any;
 
-    const result = await verifyTransactionSignature(payload, "0x123");
-
-    expect(result).toBe(false);
-  });
-
-  it("should handle verification errors gracefully", async () => {
-    const payload: ExactSuiPayload = {
-      signature: "invalid_base64!!!",
-      txData: toBase64(new Uint8Array([1, 2, 3, 4])),
-    };
-
-    const result = await verifyTransactionSignature(payload, "0x123");
-
-    expect(result).toBe(false);
-  });
-});
-
-describe("encodeTransaction", () => {
-  it("should encode transaction to base64", async () => {
-    const mockRpc = {} as any;
     const mockTransaction = {
       build: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4])),
     } as any;
 
-    const result = await encodeTransaction(mockTransaction, mockRpc);
-
-    expect(mockTransaction.build).toHaveBeenCalledWith({ client: mockRpc });
-    expect(typeof result).toBe("string");
-    expect(result.length).toBeGreaterThan(0);
-  });
-
-  it("should throw error when encoding fails", async () => {
-    const mockRpc = {} as any;
-    const mockTransaction = {
-      build: vi.fn().mockRejectedValue(new Error("Build failed")),
-    } as any;
-
-    await expect(encodeTransaction(mockTransaction, mockRpc)).rejects.toThrow("Build failed");
+    // Act & Assert
+    await expect(signAndSimulateTransaction(mockSigner, mockTransaction, mockRpc)).rejects.toThrow(
+      "transaction_simulation_failed",
+    );
   });
 });
