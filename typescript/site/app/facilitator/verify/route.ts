@@ -8,8 +8,8 @@ import {
   VerifyResponse,
   createConnectedClient,
   createSigner,
-} from "x402/types";
-import { verify } from "x402/facilitator";
+} from "@nautic/x402/types";
+import { verify } from "@nautic/x402/facilitator";
 import { ALLOWED_NETWORKS } from "../config";
 
 type VerifyRequest = {
@@ -106,7 +106,8 @@ export async function POST(req: Request) {
   }
 
   try {
-    const valid = await verify(client, paymentPayload, paymentRequirements);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const valid = await verify(client as any, paymentPayload, paymentRequirements);
     return Response.json(valid);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

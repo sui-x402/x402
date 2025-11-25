@@ -1,4 +1,4 @@
-import { settle } from "x402/facilitator";
+import { settle } from "@nautic/x402/facilitator";
 import {
   PaymentPayload,
   PaymentPayloadSchema,
@@ -8,7 +8,7 @@ import {
   SupportedEVMNetworks,
   SupportedSVMNetworks,
   createSigner,
-} from "x402/types";
+} from "@nautic/x402/types";
 import { ALLOWED_NETWORKS } from "../config";
 
 type SettleRequest = {

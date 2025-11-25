@@ -8,7 +8,7 @@ declare module "x402/facilitator" {
     PaymentRequirements,
     VerifyResponse,
     SettleResponse,
-  } from "x402/types/verify";
+  } from "@nautic/x402/types/verify";
 
   // Define a minimal client type that works for both EVM and Solana signers
   type SimpleClient = {

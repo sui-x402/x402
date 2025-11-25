@@ -1,4 +1,4 @@
-import { Network } from "x402/types";
+import { Network } from "@nautic/x402/types";
 
 export const ALLOWED_NETWORKS: Network[] | string[] = [
   "base-sepolia",
