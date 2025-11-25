@@ -1,29 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { exact } from "x402/schemes";
-import { findMatchingPaymentRequirements } from "x402/shared";
-import { getPaywallHtml } from "x402/paywall";
+import { exact } from "@nautic/x402/schemes";
+import { findMatchingPaymentRequirements } from "@nautic/x402/shared";
+import { getPaywallHtml } from "@nautic/x402/paywall";
 import {
   FacilitatorConfig,
   Network,
   PaymentMiddlewareConfig,
   PaymentPayload,
   PaymentRequirements,
-} from "x402/types";
+} from "@nautic/x402/types";
 import type { Address as SolanaAddress } from "@solana/kit";
-import { useFacilitator } from "x402/verify";
+import { useFacilitator } from "@nautic/x402/verify";
 import { withX402 } from "./index";
 
 // Mock dependencies
-vi.mock("x402/verify", () => ({
+vi.mock("@nautic/x402/verify", () => ({
   useFacilitator: vi.fn(),
 }));
 
-vi.mock("x402/paywall", () => ({
+vi.mock("@nautic/x402/paywall", () => ({
   getPaywallHtml: vi.fn(),
 }));
 
-vi.mock("x402/shared", async importOriginal => {
+vi.mock("@nautic/x402/shared", async importOriginal => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
@@ -39,11 +39,11 @@ vi.mock("x402/shared", async importOriginal => {
   };
 });
 
-vi.mock("x402/shared/evm", () => ({
+vi.mock("@nautic/x402/shared/evm", () => ({
   getUsdcAddressForChain: vi.fn().mockReturnValue("0x036CbD53842c5426634e7929541eC2318f3dCF7e"),
 }));
 
-vi.mock("x402/schemes", () => ({
+vi.mock("@nautic/x402/schemes", () => ({
   exact: {
     evm: {
       decodePayment: vi.fn(),

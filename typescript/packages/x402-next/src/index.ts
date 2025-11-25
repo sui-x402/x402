@@ -2,9 +2,15 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { Address } from "viem";
 import type { Address as SolanaAddress } from "@solana/kit";
-import { computeRoutePatterns, findMatchingRoute } from "x402/shared";
-import { FacilitatorConfig, Resource, RoutesConfig, RouteConfig, PaywallConfig } from "x402/types";
-import { useFacilitator } from "x402/verify";
+import { computeRoutePatterns, findMatchingRoute } from "@nautic/x402/shared";
+import {
+  FacilitatorConfig,
+  Resource,
+  RoutesConfig,
+  RouteConfig,
+  PaywallConfig,
+} from "@nautic/x402/types";
+import { useFacilitator } from "@nautic/x402/verify";
 
 import { POST } from "./api/session-token";
 import {
@@ -326,9 +332,9 @@ export type {
   Resource,
   RouteConfig,
   RoutesConfig,
-} from "x402/types";
+} from "@nautic/x402/types";
 export type { Address as SolanaAddress } from "@solana/kit";
-export type { SuiAddress } from "x402/types";
+export type { SuiAddress } from "@nautic/x402/types";
 
 // Export session token API handlers for Onramp
 export { POST };

@@ -2,13 +2,13 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { Address, getAddress } from "viem";
 import type { Address as SolanaAddress } from "@solana/kit";
-import { exact } from "x402/schemes";
+import { exact } from "@nautic/x402/schemes";
 import {
   findMatchingPaymentRequirements,
   processPriceToAtomicAmount,
   toJsonSafe,
-} from "x402/shared";
-import { getPaywallHtml } from "x402/paywall";
+} from "@nautic/x402/shared";
+import { getPaywallHtml } from "@nautic/x402/paywall";
 import {
   moneySchema,
   PaymentPayload,
@@ -25,8 +25,8 @@ import {
   SupportedPaymentKindsResponse,
   VerifyResponse,
   SettleResponse,
-} from "x402/types";
-import { safeBase64Encode } from "x402/shared";
+} from "@nautic/x402/types";
+import { safeBase64Encode } from "@nautic/x402/shared";
 
 /**
  * Builds payment requirements from route configuration
