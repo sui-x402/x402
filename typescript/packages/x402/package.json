@@ -1,6 +1,6 @@
 {
   "name": "@nautic/x402",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/cjs/index.d.ts",
@@ -21,6 +21,9 @@
   "author": "Coinbase Inc.",
   "repository": "https://github.com/sui-x402/x402",
   "description": "Sui-supported fork of Coinbase x402 Payment Protocol",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@coinbase/onchainkit": "^0.38.14",
     "@craftamap/esbuild-plugin-html": "^0.9.0",
