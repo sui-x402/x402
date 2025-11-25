@@ -618,6 +618,17 @@ describe("paymentMiddleware()", () => {
       },
     });
 
+    const supportedResponse = {
+      kinds: [
+        {
+          scheme: "exact",
+          network: "sui",
+          extra: { feePayer: "0xFeePayer" },
+        },
+      ],
+    };
+    (mockSupported as ReturnType<typeof vi.fn>).mockResolvedValue(supportedResponse);
+
     middleware = paymentMiddleware(suiPayTo, suiRoutesConfig, facilitatorConfig);
 
     mockReq.headers = {};
@@ -657,6 +668,17 @@ describe("paymentMiddleware()", () => {
       },
     });
 
+    const supportedResponse = {
+      kinds: [
+        {
+          scheme: "exact",
+          network: "sui-testnet",
+          extra: { feePayer: "0xFeePayer" },
+        },
+      ],
+    };
+    (mockSupported as ReturnType<typeof vi.fn>).mockResolvedValue(supportedResponse);
+
     middleware = paymentMiddleware(suiPayTo, suiRoutesConfig, facilitatorConfig);
 
     mockReq.headers = {};
@@ -669,7 +691,7 @@ describe("paymentMiddleware()", () => {
           expect.objectContaining({
             network: "sui-testnet",
             payTo: suiPayTo,
-            asset: "0xa1906aedd654b101e676c58029480970f1677376f2d394374117a05034038753::usdc::USDC",
+            asset: "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
           }),
         ]),
       }),
