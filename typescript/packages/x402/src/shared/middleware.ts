@@ -9,9 +9,16 @@ import {
   PaymentRequirements,
   PaymentPayload,
   SPLTokenAmount,
+  SuiTokenAmount,
+  SupportedEVMNetworks,
+  SupportedSVMNetworks,
+  SupportedSUINetworks,
+  ExactEvmPayload,
+  ExactSvmPayload,
+  ExactSuiPayload,
 } from "../types";
 import { RoutesConfig } from "../types";
-import { safeBase64Decode } from "./base64";
+import { safeBase64Decode, safeBase64Encode } from "./base64";
 import { getUsdcChainConfigForChain } from "./evm";
 import { getNetworkId } from "./network";
 
@@ -122,6 +129,22 @@ export function findMatchingRoute(
  * @returns The default asset
  */
 export function getDefaultAsset(network: Network) {
+  // sui
+  if (SupportedSUINetworks.includes(network)) {
+    if (network === "sui") {
+      return {
+        address: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+        decimals: 6,
+      };
+    }
+    if (network === "sui-testnet") {
+      return {
+        address: "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
+        decimals: 6,
+      };
+    }
+  }
+
   const chainId = getNetworkId(network);
   const usdc = getUsdcChainConfigForChain(chainId);
   if (!usdc) {
@@ -148,11 +171,14 @@ export function processPriceToAtomicAmount(
   price: Price,
   network: Network,
 ):
-  | { maxAmountRequired: string; asset: ERC20TokenAmount["asset"] | SPLTokenAmount["asset"] }
+  | {
+      maxAmountRequired: string;
+      asset: ERC20TokenAmount["asset"] | SPLTokenAmount["asset"] | SuiTokenAmount["asset"];
+    }
   | { error: string } {
   // Handle USDC amount (string) or token amount (ERC20TokenAmount)
   let maxAmountRequired: string;
-  let asset: ERC20TokenAmount["asset"] | SPLTokenAmount["asset"];
+  let asset: ERC20TokenAmount["asset"] | SPLTokenAmount["asset"] | SuiTokenAmount["asset"];
 
   if (typeof price === "string" || typeof price === "number") {
     // USDC amount in dollars
@@ -207,4 +233,46 @@ export function decodeXPaymentResponse(header: string) {
     network: Network;
     payer: Address;
   };
+}
+
+/**
+ * Encodes a payment payload into a base64 string, ensuring bigint values are properly stringified
+ *
+ * @param payment - The payment payload to encode
+ * @returns A base64 encoded string representation of the payment payload
+ */
+export function encodeXPaymentHeader(payment: PaymentPayload): string {
+  let safe: PaymentPayload;
+
+  // evm
+  if (SupportedEVMNetworks.includes(payment.network)) {
+    const evmPayload = payment.payload as ExactEvmPayload;
+    safe = {
+      ...payment,
+      payload: {
+        ...evmPayload,
+        authorization: Object.fromEntries(
+          Object.entries(evmPayload.authorization).map(([key, value]) => [
+            key,
+            typeof value === "bigint" ? (value as bigint).toString() : value,
+          ]),
+        ) as ExactEvmPayload["authorization"],
+      },
+    };
+    return safeBase64Encode(JSON.stringify(safe));
+  }
+
+  // svm
+  if (SupportedSVMNetworks.includes(payment.network)) {
+    safe = { ...payment, payload: payment.payload as ExactSvmPayload };
+    return safeBase64Encode(JSON.stringify(safe));
+  }
+
+  // sui
+  if (SupportedSUINetworks.includes(payment.network)) {
+    safe = { ...payment, payload: payment.payload as ExactSuiPayload };
+    return safeBase64Encode(JSON.stringify(safe));
+  }
+
+  throw new Error("Invalid network");
 }

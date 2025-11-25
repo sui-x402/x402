@@ -18,6 +18,8 @@ export const NetworkSchema = z.enum([
   "story",
   "educhain",
   "skale-base-sepolia",
+  "sui",
+  "sui-testnet",
 ]);
 export type Network = z.infer<typeof NetworkSchema>;
 
@@ -64,9 +66,18 @@ export const SvmNetworkToChainId = new Map<Network, number>([
   ["solana", 101],
 ]);
 
+// sui
+export const SupportedSUINetworks: Network[] = ["sui", "sui-testnet"];
+export const SuiNetworkToChainId = new Map<Network, number>([
+  ["sui", 784], // Sui mainnet chain ID
+  ["sui-testnet", 785], // Sui testnet chain ID
+]);
+
 export const ChainIdToNetwork = Object.fromEntries(
-  [...SupportedEVMNetworks, ...SupportedSVMNetworks].map(network => [
-    EvmNetworkToChainId.get(network),
+  [...SupportedEVMNetworks, ...SupportedSVMNetworks, ...SupportedSUINetworks].map(network => [
+    EvmNetworkToChainId.get(network) ||
+      SvmNetworkToChainId.get(network) ||
+      SuiNetworkToChainId.get(network),
     network,
   ]),
 ) as Record<number, Network>;

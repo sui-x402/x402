@@ -358,6 +358,84 @@ describe("paymentMiddleware()", () => {
     );
   });
 
+  it("should return 402 for sui mainnet when no payment header is present", async () => {
+    const suiRoutesConfig: RoutesConfig = {
+      "/weather": {
+        price: "$0.001",
+        network: "sui",
+        config: middlewareConfig,
+      },
+    };
+    const suiPayTo = "0x1234567890123456789012345678901234567890123456789012345678901234";
+
+    (findMatchingRoute as ReturnType<typeof vi.fn>).mockReturnValue({
+      verb: "GET",
+      pattern: /^\/weather$/,
+      config: {
+        price: "$0.001",
+        network: "sui",
+        config: middlewareConfig,
+      },
+    });
+
+    middleware = paymentMiddleware(suiPayTo, suiRoutesConfig, facilitatorConfig);
+
+    await middleware(mockContext, mockNext);
+
+    expect(mockContext.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accepts: expect.arrayContaining([
+          expect.objectContaining({
+            network: "sui",
+            payTo: suiPayTo,
+            asset: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+          }),
+        ]),
+        x402Version: 1,
+      }),
+      402,
+    );
+  });
+
+  it("should return 402 for sui-testnet when no payment header is present", async () => {
+    const suiRoutesConfig: RoutesConfig = {
+      "/weather": {
+        price: "$0.001",
+        network: "sui-testnet",
+        config: middlewareConfig,
+      },
+    };
+    const suiPayTo = "0x1234567890123456789012345678901234567890123456789012345678901234";
+
+    (findMatchingRoute as ReturnType<typeof vi.fn>).mockReturnValue({
+      verb: "GET",
+      pattern: /^\/weather$/,
+      config: {
+        price: "$0.001",
+        network: "sui-testnet",
+        config: middlewareConfig,
+      },
+    });
+
+    middleware = paymentMiddleware(suiPayTo, suiRoutesConfig, facilitatorConfig);
+
+    await middleware(mockContext, mockNext);
+
+    expect(mockContext.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accepts: expect.arrayContaining([
+          expect.objectContaining({
+            network: "sui-testnet",
+            payTo: suiPayTo,
+            asset: "0xa1906aedd654b101e676c58029480970f1677376f2d394374117a05034038753::usdc::USDC",
+          }),
+        ]),
+        x402Version: 1,
+      }),
+      402,
+    );
+  });
+
   it("should throw error for unsupported network", async () => {
     const unsupportedRoutesConfig: RoutesConfig = {
       "/weather": {

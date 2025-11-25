@@ -25,6 +25,9 @@ app.use(
       "/weather": {
         price: "$0.001",
         network,
+        // network: "base", // uncomment for Base mainnet
+        // network: "solana", // uncomment for Solana mainnet
+        // network: "sui", // uncomment for Sui mainnet
       },
     },
     {

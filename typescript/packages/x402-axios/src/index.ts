@@ -7,6 +7,7 @@ import {
   MultiNetworkSigner,
   isMultiNetworkSigner,
   isSvmSignerWallet,
+  isSuiSignerWallet,
   Network,
   evm,
   X402Config,
@@ -86,7 +87,9 @@ export function withPaymentInterceptor(
             ? ChainIdToNetwork[(walletClient as typeof evm.EvmSigner).chain?.id]
             : isSvmSignerWallet(walletClient as Signer)
               ? (["solana", "solana-devnet"] as Network[])
-              : undefined;
+              : isSuiSignerWallet(walletClient as Signer)
+                ? (["sui", "sui-testnet"] as Network[])
+                : undefined;
 
         const selectedPaymentRequirements = paymentRequirementsSelector(parsed, network, "exact");
         const paymentHeader = await createPaymentHeader(
@@ -115,4 +118,5 @@ export function withPaymentInterceptor(
 export { decodeXPaymentResponse } from "x402/shared";
 export { createSigner, type Signer, type MultiNetworkSigner, type X402Config } from "x402/types";
 export { type PaymentRequirementsSelector } from "x402/client";
+export type { SuiAddress } from "x402/types";
 export type { Hex } from "viem";

@@ -24,6 +24,7 @@ app.use(
         // USDC amount in dollars
         price: "$0.001",
         network: "base",
+        // network: "sui", // uncomment for Sui mainnet
       },
     },
     // Pass the mainnet facilitator to the payment middleware

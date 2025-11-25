@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { encodePayment, decodePayment } from "./paymentUtils";
 import { PaymentPayload, ExactEvmPayload, ExactSvmPayload } from "../../../../types/verify";
-import { SupportedEVMNetworks, SupportedSVMNetworks } from "../../../../types";
+import {
+  ExactSuiPayload,
+  SupportedEVMNetworks,
+  SupportedSVMNetworks,
+  SupportedSUINetworks,
+} from "../../../../types";
 
 // valid exact EVM payload
 const validEvmPayload: ExactEvmPayload = {
@@ -19,6 +24,7 @@ const validEvmPayload: ExactEvmPayload = {
 // valid evm payment payload
 const defaultEvmNetwork = SupportedEVMNetworks[0] as (typeof SupportedEVMNetworks)[number];
 const defaultSvmNetwork = SupportedSVMNetworks[0] as (typeof SupportedSVMNetworks)[number];
+const defaultSuiNetwork = SupportedSUINetworks[0] as (typeof SupportedSUINetworks)[number];
 
 const validEvmPayment: PaymentPayload = {
   x402Version: 1,
@@ -40,6 +46,20 @@ const validSvmPayment: PaymentPayload = {
   payload: validSvmPayload,
 };
 
+// valid exact SUI payload
+const validSuiPayload: ExactSuiPayload = {
+  signature: "QUJDREVGR0g=", // "ABCDEFGH" base64
+  txData: "QUJDREVGR0g=", // "ABCDEFGH" base64
+};
+
+// valid SUI payment payload
+const validSuiPayment: PaymentPayload = {
+  x402Version: 1,
+  scheme: "exact",
+  network: defaultSuiNetwork,
+  payload: validSuiPayload,
+};
+
 describe("paymentUtils", () => {
   it("encodes and decodes EVM payment payloads (roundtrip)", () => {
     const encoded = encodePayment(validEvmPayment);
@@ -51,6 +71,12 @@ describe("paymentUtils", () => {
     const encoded = encodePayment(validSvmPayment);
     const decoded = decodePayment(encoded);
     expect(decoded).toEqual(validSvmPayment);
+  });
+
+  it("encodes and decodes SUI payment payloads (roundtrip)", () => {
+    const encoded = encodePayment(validSuiPayment);
+    const decoded = decodePayment(encoded);
+    expect(decoded).toEqual(validSuiPayment);
   });
 
   it("throws on invalid network in encodePayment", () => {

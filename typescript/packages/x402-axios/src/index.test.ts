@@ -352,4 +352,74 @@ describe("withPaymentInterceptor() - SVM and MultiNetwork", () => {
 
     expect(selectPaymentRequirements).toHaveBeenCalledWith(expect.any(Array), undefined, "exact");
   });
+
+  it("passes [sui, sui-testnet] for Sui-only signers", async () => {
+    vi.doMock("x402/types", async () => {
+      const actual = await vi.importActual("x402/types");
+      return {
+        ...actual,
+        isEvmSignerWallet: vi.fn().mockReturnValue(false),
+        isMultiNetworkSigner: vi.fn().mockReturnValue(false),
+        isSvmSignerWallet: vi.fn().mockReturnValue(false),
+        isSuiSignerWallet: vi.fn().mockReturnValue(true),
+      };
+    });
+
+    vi.doMock("x402/client", () => ({
+      createPaymentHeader: vi.fn().mockResolvedValue("payment-header-value"),
+      selectPaymentRequirements: vi.fn((reqs: PaymentRequirements[]) => reqs[0]),
+    }));
+
+    const { withPaymentInterceptor } = await import("./index");
+    const { selectPaymentRequirements } = await import("x402/client");
+
+    const mockAxiosClient: AxiosInstance = {
+      interceptors: { response: { use: vi.fn() } },
+      request: vi.fn().mockResolvedValue({ data: "success" } as AxiosResponse),
+    } as unknown as AxiosInstance;
+
+    // Sui-like signer (shape is irrelevant due to mocked guards)
+    const suiWallet = {} as unknown as object;
+
+    withPaymentInterceptor(mockAxiosClient, suiWallet as Signer);
+    const handler = (mockAxiosClient.interceptors.response.use as ReturnType<typeof vi.fn>).mock
+      .calls[0][1];
+
+    // Local validPaymentRequirements for this suite
+    const localValidPaymentRequirements: PaymentRequirements[] = [
+      {
+        scheme: "exact",
+        network: "sui",
+        maxAmountRequired: "1000000",
+        resource: "https://api.example.com/resource",
+        description: "Test payment",
+        mimeType: "application/json",
+        payTo: "0x1234567890123456789012345678901234567890123456789012345678901234",
+        maxTimeoutSeconds: 300,
+        asset: "0x2::sui::SUI",
+      },
+    ];
+
+    const error = new AxiosError(
+      "Error",
+      "ERROR",
+      { headers: new AxiosHeaders() } as InternalAxiosRequestConfig,
+      {},
+      {
+        status: 402,
+        statusText: "Payment Required",
+        data: { accepts: [{ ...localValidPaymentRequirements[0] }], x402Version: 1 },
+        headers: {},
+        config: { headers: new AxiosHeaders() } as InternalAxiosRequestConfig,
+      },
+    );
+
+    await handler(error);
+
+    expect(selectPaymentRequirements).toHaveBeenCalledWith(
+      expect.any(Array),
+      ["sui", "sui-testnet"],
+      "exact",
+    );
+  });
 });

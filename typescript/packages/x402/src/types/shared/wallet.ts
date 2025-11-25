@@ -1,11 +1,15 @@
 import * as evm from "./evm/wallet";
 import * as svm from "../../shared/svm/wallet";
-import { SupportedEVMNetworks, SupportedSVMNetworks } from "./network";
+import * as sui from "../../shared/sui/wallet";
+import { SupportedEVMNetworks, SupportedSUINetworks, SupportedSVMNetworks } from "./network";
 import { Hex } from "viem";
+import { SuiAddress } from "../../shared/sui/wallet";
 
-export type ConnectedClient = evm.ConnectedClient | svm.SvmConnectedClient;
-export type Signer = evm.EvmSigner | svm.SvmSigner;
-export type MultiNetworkSigner = { evm: evm.EvmSigner; svm: svm.SvmSigner };
+export type { SuiAddress };
+
+export type ConnectedClient = evm.ConnectedClient | svm.SvmConnectedClient | sui.SuiConnectedClient;
+export type Signer = evm.EvmSigner | svm.SvmSigner | sui.SuiSigner;
+export type MultiNetworkSigner = { evm: evm.EvmSigner; svm: svm.SvmSigner; sui: sui.SuiSigner };
 
 /**
  * Creates a public client configured for the specified network.
@@ -20,6 +24,10 @@ export function createConnectedClient(network: string): ConnectedClient {
 
   if (SupportedSVMNetworks.find(n => n === network)) {
     return svm.createSvmConnectedClient(network);
+  }
+
+  if (SupportedSUINetworks.find(n => n === network)) {
+    return sui.createSuiConnectedClient(network);
   }
 
   throw new Error(`Unsupported network: ${network}`);
@@ -41,6 +49,11 @@ export function createSigner(network: string, privateKey: Hex | string): Promise
   // svm
   if (SupportedSVMNetworks.find(n => n === network)) {
     return svm.createSignerFromBase58(privateKey as string);
+  }
+
+  // sui
+  if (SupportedSUINetworks.find(n => n === network)) {
+    return sui.createSignerFromPrivateKey(privateKey as string);
   }
 
   throw new Error(`Unsupported network: ${network}`);
@@ -67,11 +80,21 @@ export function isSvmSignerWallet(wallet: Signer): wallet is svm.SvmSigner {
 }
 
 /**
+ * Checks if the given wallet is a Sui signer wallet
+ *
+ * @param wallet - The object wallet to check
+ * @returns True if the wallet is a Sui signer wallet, false otherwise
+ */
+export function isSuiSignerWallet(wallet: Signer): wallet is sui.SuiSigner {
+  return sui.isSignerWallet(wallet);
+}
+
+/**
  * Checks if the given wallet is a multi network signer wallet
  *
  * @param wallet - The object wallet to check
  * @returns True if the wallet is a multi network signer wallet, false otherwise
  */
 export function isMultiNetworkSigner(wallet: object): wallet is MultiNetworkSigner {
-  return "evm" in wallet && "svm" in wallet;
+  return "evm" in wallet && "svm" in wallet && "sui" in wallet;
 }

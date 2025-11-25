@@ -9,6 +9,7 @@ const EvmAddressRegex = /^0x[0-9a-fA-F]{40}$/;
 const MixedAddressRegex = /^0x[a-fA-F0-9]{40}|[A-Za-z0-9][A-Za-z0-9-]{0,34}[A-Za-z0-9]$/;
 const HexEncoded64ByteRegex = /^0x[0-9a-fA-F]{64}$/;
 const EvmSignatureRegex = /^0x[0-9a-fA-F]+$/; // Flexible hex signature validation
+const SuiAddressRegex = /^0x[a-fA-F0-9]{1,64}$/;
 // Enums
 export const schemes = ["exact"] as const;
 export const x402Versions = [1] as const;
@@ -38,6 +39,10 @@ export const ErrorReasons = [
   "invalid_exact_svm_payload_transaction_sender_ata_not_found",
   "invalid_exact_svm_payload_transaction_simulation_failed",
   "invalid_exact_svm_payload_transaction_transfer_to_incorrect_ata",
+  "invalid_exact_svm_payload_transaction_simulation_failed",
+  "invalid_exact_svm_payload_transaction_transfer_to_incorrect_ata",
+  "invalid_exact_sui_payload_signature",
+  "invalid_exact_sui_payload_transaction",
   "invalid_network",
   "invalid_payload",
   "invalid_payment_requirements",
@@ -61,11 +66,16 @@ const isInteger: (value: string) => boolean = value =>
 const hasMaxLength = (maxLength: number) => (value: string) => value.length <= maxLength;
 
 // x402PaymentRequirements
-const EvmOrSvmAddress = z.string().regex(EvmAddressRegex).or(z.string().regex(SvmAddressRegex));
-const mixedAddressOrSvmAddress = z
+const EvmOrSvmOrSuiAddress = z
+  .string()
+  .regex(EvmAddressRegex)
+  .or(z.string().regex(SvmAddressRegex))
+  .or(z.string().regex(SuiAddressRegex));
+const mixedAddressOrSvmOrSuiAddress = z
   .string()
   .regex(MixedAddressRegex)
-  .or(z.string().regex(SvmAddressRegex));
+  .or(z.string().regex(SvmAddressRegex))
+  .or(z.string().startsWith("0x"));
 export const PaymentRequirementsSchema = z.object({
   scheme: z.enum(schemes),
   network: NetworkSchema,
@@ -74,9 +84,9 @@ export const PaymentRequirementsSchema = z.object({
   description: z.string(),
   mimeType: z.string(),
   outputSchema: z.record(z.any()).optional(),
-  payTo: EvmOrSvmAddress,
+  payTo: EvmOrSvmOrSuiAddress,
   maxTimeoutSeconds: z.number().int(),
-  asset: mixedAddressOrSvmAddress,
+  asset: mixedAddressOrSvmOrSuiAddress,
   extra: z.record(z.any()).optional(),
 });
 export type PaymentRequirements = z.infer<typeof PaymentRequirementsSchema>;
@@ -104,12 +114,19 @@ export const ExactSvmPayloadSchema = z.object({
 });
 export type ExactSvmPayload = z.infer<typeof ExactSvmPayloadSchema>;
 
+// x402ExactSuiPayload
+export const ExactSuiPayloadSchema = z.object({
+  signature: z.string().regex(Base64EncodedRegex),
+  txData: z.string().regex(Base64EncodedRegex),
+});
+export type ExactSuiPayload = z.infer<typeof ExactSuiPayloadSchema>;
+
 // x402PaymentPayload
 export const PaymentPayloadSchema = z.object({
   x402Version: z.number().refine(val => x402Versions.includes(val as 1)),
   scheme: z.enum(schemes),
   network: NetworkSchema,
-  payload: z.union([ExactEvmPayloadSchema, ExactSvmPayloadSchema]),
+  payload: z.union([ExactEvmPayloadSchema, ExactSvmPayloadSchema, ExactSuiPayloadSchema]),
 });
 export type PaymentPayload = z.infer<typeof PaymentPayloadSchema>;
 export type UnsignedPaymentPayload = Omit<PaymentPayload, "payload"> & {
@@ -193,16 +210,18 @@ export type VerifyRequest = z.infer<typeof VerifyRequestSchema>;
 export const VerifyResponseSchema = z.object({
   isValid: z.boolean(),
   invalidReason: z.enum(ErrorReasons).optional(),
-  payer: EvmOrSvmAddress.optional(),
+  payer: EvmOrSvmOrSuiAddress.optional(),
 });
 export type VerifyResponse = z.infer<typeof VerifyResponseSchema>;
+
+const TransactionHashRegex = /^0x[0-9a-fA-F]{64}$|^[1-9A-HJ-NP-Za-km-z]{32,88}$/;
 
 // x402SettleResponse
 export const SettleResponseSchema = z.object({
   success: z.boolean(),
   errorReason: z.enum(ErrorReasons).optional(),
-  payer: EvmOrSvmAddress.optional(),
-  transaction: z.string().regex(MixedAddressRegex),
+  payer: EvmOrSvmOrSuiAddress.optional(),
+  transaction: z.string().regex(TransactionHashRegex),
   network: NetworkSchema,
 });
 export type SettleResponse = z.infer<typeof SettleResponseSchema>;

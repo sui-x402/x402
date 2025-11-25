@@ -125,6 +125,7 @@ describe("paymentMiddleware()", () => {
     createAuthHeaders: async () => ({
       verify: { Authorization: "Bearer token" },
       settle: { Authorization: "Bearer token" },
+      supported: { Authorization: "Bearer token" },
     }),
   };
 
@@ -824,6 +825,98 @@ describe("paymentMiddleware()", () => {
             network: "solana",
             payTo: solanaPayTo,
             extra: expect.objectContaining({ feePayer }),
+          }),
+        ]),
+      }),
+    );
+  });
+
+  it("should return 402 for sui mainnet when no payment header is present", async () => {
+    const suiRoutesConfig = {
+      "/protected/*": {
+        price: "$0.001",
+        network: "sui",
+        config: middlewareConfig,
+      },
+    } as const;
+
+    const suiPayTo = "0x1234567890123456789012345678901234567890123456789012345678901234";
+
+    (findMatchingRoute as ReturnType<typeof vi.fn>).mockReturnValue({
+      pattern: /^\/protected\/test$/,
+      verb: "GET",
+      config: {
+        price: "$0.001",
+        network: "sui",
+        config: middlewareConfig,
+      },
+    });
+
+    const middlewareSui = paymentMiddleware(suiPayTo, suiRoutesConfig, facilitatorConfig);
+
+    const request = {
+      ...mockRequest,
+      headers: new Headers({ Accept: "application/json" }),
+    } as NextRequest;
+
+    const response = await middlewareSui(request);
+
+    expect(response.status).toBe(402);
+    const json = await response.json();
+    expect(json).toEqual(
+      expect.objectContaining({
+        x402Version: 1,
+        accepts: expect.arrayContaining([
+          expect.objectContaining({
+            network: "sui",
+            payTo: suiPayTo,
+            asset: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+          }),
+        ]),
+      }),
+    );
+  });
+
+  it("should return 402 for sui-testnet when no payment header is present", async () => {
+    const suiRoutesConfig = {
+      "/protected/*": {
+        price: "$0.001",
+        network: "sui-testnet",
+        config: middlewareConfig,
+      },
+    } as const;
+
+    const suiPayTo = "0x1234567890123456789012345678901234567890123456789012345678901234";
+
+    (findMatchingRoute as ReturnType<typeof vi.fn>).mockReturnValue({
+      pattern: /^\/protected\/test$/,
+      verb: "GET",
+      config: {
+        price: "$0.001",
+        network: "sui-testnet",
+        config: middlewareConfig,
+      },
+    });
+
+    const middlewareSui = paymentMiddleware(suiPayTo, suiRoutesConfig, facilitatorConfig);
+
+    const request = {
+      ...mockRequest,
+      headers: new Headers({ Accept: "application/json" }),
+    } as NextRequest;
+
+    const response = await middlewareSui(request);
+
+    expect(response.status).toBe(402);
+    const json = await response.json();
+    expect(json).toEqual(
+      expect.objectContaining({
+        x402Version: 1,
+        accepts: expect.arrayContaining([
+          expect.objectContaining({
+            network: "sui-testnet",
+            payTo: suiPayTo,
+            asset: "0xa1906aedd654b101e676c58029480970f1677376f2d394374117a05034038753::usdc::USDC",
           }),
         ]),
       }),

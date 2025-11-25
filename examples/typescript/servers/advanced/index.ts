@@ -134,9 +134,16 @@ app.get("/delayed-settlement", async (req, res) => {
     createExactPaymentRequirements(
       "$0.001",
       // network: "base" // uncomment for Base mainnet
+      // network: "sui" // uncomment for Sui mainnet
       "base-sepolia",
       resource,
       "Access to weather data (async)",
+    ),
+    createExactPaymentRequirements(
+      "$0.001",
+      "sui-testnet",
+      resource,
+      "Access to weather data (async) via Sui",
     ),
   ];
 
@@ -180,6 +187,7 @@ app.get("/dynamic-price", async (req, res) => {
     createExactPaymentRequirements(
       price, // Expect dynamic pricing
       // network: "base" // uncomment for Base mainnet
+      // network: "sui" // uncomment for Sui mainnet
       "base-sepolia",
       resource,
       "Access to weather data",
@@ -234,6 +242,7 @@ app.get("/multiple-payment-requirements", async (req, res) => {
         },
       },
       // network: "base" // uncomment for Base mainnet
+      // network: "sui" // uncomment for Sui mainnet
       "base-sepolia",
       resource,
     ),

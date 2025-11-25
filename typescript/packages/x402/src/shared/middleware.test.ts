@@ -367,6 +367,22 @@ describe("getDefaultAsset", () => {
     });
   });
 
+  it("should return Sui Mainnet USDC asset details", () => {
+    const result = getDefaultAsset("sui");
+    expect(result).toEqual({
+      address: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+      decimals: 6,
+    });
+  });
+
+  it("should return Sui Testnet USDC asset details", () => {
+    const result = getDefaultAsset("sui-testnet");
+    expect(result).toEqual({
+      address: "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
+      decimals: 6,
+    });
+  });
+
   it("should handle unknown networks", () => {
     expect(() => getDefaultAsset("unknown" as Network)).toThrow("Unsupported network: unknown");
   });
@@ -399,6 +415,17 @@ describe("processPriceToAtomicAmount", () => {
           name: "USDC",
           version: "2",
         },
+      },
+    });
+  });
+
+  it("should handle string price in dollars for Sui", () => {
+    const result = processPriceToAtomicAmount("$0.01", "sui-testnet");
+    expect(result).toEqual({
+      maxAmountRequired: "10000",
+      asset: {
+        address: "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
+        decimals: 6,
       },
     });
   });

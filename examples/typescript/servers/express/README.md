@@ -7,6 +7,7 @@ This is an example Express.js server that demonstrates how to use the `x402-expr
 - Node.js v20+ (install via [nvm](https://github.com/nvm-sh/nvm))
 - pnpm v10 (install via [pnpm.io/installation](https://pnpm.io/installation))
 - A valid Ethereum address for receiving payments
+- A valid Sui address for receiving payments (if accepting payments on Sui)
 - Coinbase Developer Platform API Key & Secret (if accepting payments on Base mainnet)
   -- Get them here [https://portal.cdp.coinbase.com/projects](https://portal.cdp.coinbase.com/projects)
 
@@ -111,6 +112,8 @@ app.use(
       // Define your routes and their payment requirements
       "GET /your-endpoint": {
         price: "$0.10",
+        // network: "base", // uncomment for Base mainnet
+        // network: "sui", // uncomment for Sui mainnet
         network: "base-sepolia",
       },
       "/premium/*": {
