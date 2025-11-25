@@ -20,7 +20,7 @@
   "license": "Apache-2.0",
   "author": "Coinbase Inc.",
   "repository": "https://github.com/sui-x402/x402",
-  "description": "x402 Payment Protocol",
+  "description": "Sui-supported fork of Coinbase x402 Payment Protocol",
   "devDependencies": {
     "@coinbase/onchainkit": "^0.38.14",
     "@craftamap/esbuild-plugin-html": "^0.9.0",

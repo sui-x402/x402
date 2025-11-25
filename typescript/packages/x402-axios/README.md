@@ -1,6 +1,6 @@
 # x402-axios
 
-A utility package that extends Axios to automatically handle 402 Payment Required responses using the x402 payment protocol. This package enables seamless integration of payment functionality into your applications when making HTTP requests with Axios.
+A utility package that extends Axios to automatically handle 402 Payment Required responses using the x402 payment protocol. This is a Sui-supported fork of Coinbase x402 Payment Protocol. This package enables seamless integration of payment functionality into your applications when making HTTP requests with Axios.
 
 ## Installation
 
@@ -11,26 +11,21 @@ npm install x402-axios
 ## Quick Start
 
 ```typescript
-import { createWalletClient, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { withPaymentInterceptor } from "x402-axios";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
+import { withPaymentInterceptor } from "@nautic/x402-axios";
 import axios from "axios";
-import { baseSepolia } from "viem/chains";
 
-// Create a wallet client
-const account = privateKeyToAccount("0xYourPrivateKey");
-const client = createWalletClient({
-  account,
-  transport: http(),
-  chain: baseSepolia,
-});
+// Create a Sui signer from your private key
+const { secretKey } = decodeSuiPrivateKey("suiprivkey1...");
+const keypair = Ed25519Keypair.fromSecretKey(secretKey);
 
 // Create an Axios instance with payment handling
 const api = withPaymentInterceptor(
   axios.create({
     baseURL: "https://api.example.com",
   }),
-  client
+  keypair,
 );
 
 // Make a request that may require payment
@@ -59,6 +54,7 @@ Adds a response interceptor to an Axios instance to handle 402 Payment Required 
 #### Returns
 
 The modified Axios instance with the payment interceptor that will:
+
 1. Intercept 402 responses
 2. Parse the payment requirements
 3. Create a payment header using the provided wallet client
