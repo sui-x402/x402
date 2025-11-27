@@ -1,6 +1,6 @@
 {
   "name": "@nautic/x402-express",
-  "version": "0.7.8",
+  "version": "0.7.9",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/index.d.ts",
@@ -15,7 +15,13 @@
     "lint": "eslint . --ext .ts --fix",
     "lint:check": "eslint . --ext .ts"
   },
-  "keywords": [],
+  "keywords": [
+    "sui",
+    "x402",
+    "payment-protocol",
+    "coinbase",
+    "nautic"
+  ],
   "license": "Apache-2.0",
   "author": "Coinbase Inc.",
   "repository": "https://github.com/sui-x402/x402",
