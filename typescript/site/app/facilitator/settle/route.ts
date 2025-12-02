@@ -7,9 +7,12 @@ import {
   SettleResponse,
   SupportedEVMNetworks,
   SupportedSVMNetworks,
+  SupportedSUINetworks,
   createSigner,
+  Signer,
 } from "@nautic/x402/types";
 import { ALLOWED_NETWORKS } from "../config";
+import { SuiSigner } from "x402/shared";
 
 type SettleRequest = {
   paymentPayload: PaymentPayload;
@@ -37,6 +40,19 @@ export async function POST(req: Request) {
         success: false,
         errorReason: "invalid_network",
         error: `This facilitator only supports: ${ALLOWED_NETWORKS.join(", ")}. Network '${network}' is not supported.`,
+        transaction: "",
+        network: network,
+      } as SettleResponse,
+      { status: 400 },
+    );
+  }
+
+  if (SupportedSUINetworks.includes(network)) {
+    return Response.json(
+      {
+        success: false,
+        errorReason: "unsupported_scheme",
+        error: "Sui network settlement is not yet supported",
         transaction: "",
         network: network,
       } as SettleResponse,
@@ -105,7 +121,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const response = await settle(wallet, paymentPayload, paymentRequirements);
+    const response = await settle(
+      wallet as Exclude<Signer, SuiSigner>,
+      paymentPayload,
+      paymentRequirements,
+    );
     return Response.json(response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

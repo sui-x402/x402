@@ -4,13 +4,18 @@ import {
   PaymentRequirements,
   PaymentRequirementsSchema,
   SupportedEVMNetworks,
+  SupportedSUINetworks,
   SupportedSVMNetworks,
   VerifyResponse,
   createConnectedClient,
   createSigner,
+  Signer,
+  ConnectedClient,
 } from "@nautic/x402/types";
 import { verify } from "@nautic/x402/facilitator";
 import { ALLOWED_NETWORKS } from "../config";
+import { SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
+import { SuiSigner } from "x402/shared";
 
 type VerifyRequest = {
   paymentPayload: PaymentPayload;
@@ -38,6 +43,18 @@ export async function POST(req: Request) {
         isValid: false,
         invalidReason: "invalid_network",
         error: `This facilitator only supports: ${ALLOWED_NETWORKS.join(", ")}. Network '${network}' is not supported.`,
+      } as VerifyResponse,
+      { status: 400 },
+    );
+  }
+
+  if (SupportedSUINetworks.includes(network)) {
+    return Response.json(
+      {
+        isValid: false,
+        invalidReason: "unsupported_scheme",
+        error: "Sui network verification is not yet supported",
+        payer: "",
       } as VerifyResponse,
       { status: 400 },
     );
@@ -106,8 +123,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const valid = await verify(client as any, paymentPayload, paymentRequirements);
+    const valid = await verify(
+      client as Exclude<ConnectedClient, SuiJsonRpcClient> | Exclude<Signer, SuiSigner>,
+      paymentPayload,
+      paymentRequirements,
+    );
     return Response.json(valid);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
