@@ -1,6 +1,6 @@
 import { verify as verifyExactEvm, settle as settleExactEvm } from "../schemes/exact/evm";
 import { verify as verifyExactSvm, settle as settleExactSvm } from "../schemes/exact/svm";
-import { SupportedEVMNetworks, SupportedSVMNetworks } from "../types/shared";
+import { SupportedEVMNetworks, SupportedSVMNetworks, SupportedSUINetworks } from "../types/shared";
 import { X402Config } from "../types/config";
 import {
   ConnectedClient as EvmConnectedClient,
@@ -57,6 +57,15 @@ export async function verify<
         config,
       );
     }
+
+    // sui
+    if (SupportedSUINetworks.includes(paymentRequirements.network)) {
+      return {
+        isValid: false,
+        invalidReason: "unsupported_scheme",
+        payer: "",
+      };
+    }
   }
 
   // unsupported scheme
@@ -104,6 +113,17 @@ export async function settle<transport extends Transport, chain extends Chain>(
         paymentRequirements,
         config,
       );
+    }
+
+    // sui
+    if (SupportedSUINetworks.includes(paymentRequirements.network)) {
+      return {
+        success: false,
+        errorReason: "unsupported_scheme",
+        transaction: "",
+        network: paymentRequirements.network,
+        payer: "",
+      };
     }
   }
 

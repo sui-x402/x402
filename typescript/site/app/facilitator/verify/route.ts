@@ -4,10 +4,13 @@ import {
   PaymentRequirements,
   PaymentRequirementsSchema,
   SupportedEVMNetworks,
+  SupportedSUINetworks,
   SupportedSVMNetworks,
   VerifyResponse,
   createConnectedClient,
   createSigner,
+  isSuiSignerWallet,
+  Signer,
 } from "x402/types";
 import { verify } from "x402/facilitator";
 import { ALLOWED_NETWORKS } from "../config";
@@ -43,6 +46,20 @@ export async function POST(req: Request) {
     );
   }
 
+  const isSuiNetwork = SupportedSUINetworks.includes(network);
+
+  if (isSuiNetwork) {
+    return Response.json(
+      {
+        isValid: false,
+        invalidReason: "unsupported_scheme",
+        error: "Sui network verification is not yet supported",
+        payer: "",
+      } as VerifyResponse,
+      { status: 400 },
+    );
+  }
+
   const client = SupportedEVMNetworks.includes(network)
     ? createConnectedClient(body.paymentRequirements.network)
     : SupportedSVMNetworks.includes(network)
@@ -54,6 +71,18 @@ export async function POST(req: Request) {
       {
         isValid: false,
         invalidReason: "invalid_network",
+      } as VerifyResponse,
+      { status: 400 },
+    );
+  }
+
+  if (isSuiSignerWallet(client as Signer)) {
+    return Response.json(
+      {
+        isValid: false,
+        invalidReason: "unsupported_scheme",
+        error: "Sui network verification is not yet supported",
+        payer: "",
       } as VerifyResponse,
       { status: 400 },
     );
@@ -106,6 +135,7 @@ export async function POST(req: Request) {
   }
 
   try {
+    // @ts-expect-error ConnectedClient union includes SuiJsonRpcClient but we've already filtered Sui signers
     const valid = await verify(client, paymentPayload, paymentRequirements);
     return Response.json(valid);
   } catch (error) {
