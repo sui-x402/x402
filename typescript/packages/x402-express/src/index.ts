@@ -346,6 +346,12 @@ export function paymentMiddleware(
     let bufferedCalls: BufferedCall[] = [];
     let settled = false;
 
+    // Create a promise that resolves when the handler finishes and calls res.end()
+    let endCalled: () => void;
+    const endPromise = new Promise<void>(resolve => {
+      endCalled = resolve;
+    });
+
     res.writeHead = function (...args: Parameters<typeof originalWriteHead>) {
       if (!settled) {
         bufferedCalls.push(["writeHead", args]);
@@ -365,6 +371,8 @@ export function paymentMiddleware(
     res.end = function (...args: Parameters<typeof originalEnd>) {
       if (!settled) {
         bufferedCalls.push(["end", args]);
+        // Signal that the handler has finished
+        endCalled();
         return res;
       }
       return originalEnd(...args);
@@ -379,7 +387,10 @@ export function paymentMiddleware(
     };
 
     // Proceed to the next middleware or route handler
-    await next();
+    next();
+
+    // Wait for the handler to actually call res.end() before checking status
+    await endPromise;
 
     // If the response from the protected route is >= 400, do not settle payment
     if (res.statusCode >= 400) {
@@ -403,7 +414,6 @@ export function paymentMiddleware(
     try {
       const settleResponse = await settle(decodedPayment, selectedPaymentRequirements);
       const responseHeader = settleResponseHeader(settleResponse);
-      res.setHeader("X-PAYMENT-RESPONSE", responseHeader);
 
       // if the settle fails, return an error
       if (!settleResponse.success) {
@@ -415,18 +425,18 @@ export function paymentMiddleware(
         });
         return;
       }
+
+      res.setHeader("X-PAYMENT-RESPONSE", responseHeader);
     } catch (error) {
       console.error(error);
-      // If settlement fails and the response hasn't been sent yet, return an error
-      if (!res.headersSent) {
-        bufferedCalls = [];
-        res.status(402).json({
-          x402Version,
-          error: error instanceof Error ? error.message : "Payment settlement failed",
-          accepts: toJsonSafe(paymentRequirements),
-        });
-        return;
-      }
+      // If settlement fails, don't send the buffered response
+      bufferedCalls = [];
+      res.status(402).json({
+        x402Version,
+        error: error instanceof Error ? error.message : "Payment settlement failed",
+        accepts: toJsonSafe(paymentRequirements),
+      });
+      return;
     } finally {
       settled = true;
       res.writeHead = originalWriteHead;
