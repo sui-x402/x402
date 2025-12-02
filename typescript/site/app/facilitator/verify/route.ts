@@ -10,12 +10,10 @@ import {
   createConnectedClient,
   createSigner,
   Signer,
-  ConnectedClient,
 } from "@nautic/x402/types";
 import { verify } from "@nautic/x402/facilitator";
 import { ALLOWED_NETWORKS } from "../config";
-import { SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
-import { SuiSigner } from "x402/shared";
+import { SuiSigner } from "@nautic/x402/shared";
 
 type VerifyRequest = {
   paymentPayload: PaymentPayload;
@@ -124,10 +122,11 @@ export async function POST(req: Request) {
 
   try {
     const valid = await verify(
-      client as Exclude<ConnectedClient, SuiJsonRpcClient> | Exclude<Signer, SuiSigner>,
+      client as Exclude<Signer, SuiSigner>,
       paymentPayload,
       paymentRequirements,
     );
+
     return Response.json(valid);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "@mysten/sui": "^1.45.0",
     "@vercel/functions": "^2.2.8",
     "next": "15.5.0",
     "react": "19.1.1",

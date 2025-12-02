@@ -12,7 +12,7 @@ import {
   Signer,
 } from "@nautic/x402/types";
 import { ALLOWED_NETWORKS } from "../config";
-import { SuiSigner } from "x402/shared";
+import { SuiSigner } from "@nautic/x402/shared";
 
 type SettleRequest = {
   paymentPayload: PaymentPayload;
