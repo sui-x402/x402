@@ -9,9 +9,10 @@ import {
   SupportedSVMNetworks,
   SupportedSUINetworks,
   createSigner,
-  isSuiSignerWallet,
+  Signer,
 } from "x402/types";
 import { ALLOWED_NETWORKS } from "../config";
+import { SuiSigner } from "x402/shared";
 
 type SettleRequest = {
   paymentPayload: PaymentPayload;
@@ -46,13 +47,24 @@ export async function POST(req: Request) {
     );
   }
 
+  if (SupportedSUINetworks.includes(network)) {
+    return Response.json(
+      {
+        success: false,
+        errorReason: "unsupported_scheme",
+        error: "Sui network settlement is not yet supported",
+        transaction: "",
+        network: network,
+      } as SettleResponse,
+      { status: 400 },
+    );
+  }
+
   const privateKey = SupportedEVMNetworks.includes(network)
     ? process.env.PRIVATE_KEY
     : SupportedSVMNetworks.includes(network)
       ? process.env.SOLANA_PRIVATE_KEY
-      : SupportedSUINetworks.includes(network)
-        ? undefined // Sui networks are not supported
-        : undefined;
+      : undefined;
 
   if (!privateKey) {
     return Response.json(
@@ -65,19 +77,6 @@ export async function POST(req: Request) {
   }
 
   const wallet = await createSigner(network, privateKey);
-
-  if (isSuiSignerWallet(wallet)) {
-    return Response.json(
-      {
-        success: false,
-        errorReason: "unsupported_scheme",
-        error: "Sui network settlement is not yet supported",
-        transaction: "",
-        network: network,
-      } as SettleResponse,
-      { status: 400 },
-    );
-  }
 
   let paymentPayload: PaymentPayload;
   try {
@@ -122,7 +121,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const response = await settle(wallet, paymentPayload, paymentRequirements);
+    const response = await settle(
+      wallet as Exclude<Signer, SuiSigner>,
+      paymentPayload,
+      paymentRequirements,
+    );
     return Response.json(response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

@@ -9,11 +9,13 @@ import {
   VerifyResponse,
   createConnectedClient,
   createSigner,
-  isSuiSignerWallet,
   Signer,
+  ConnectedClient,
 } from "x402/types";
 import { verify } from "x402/facilitator";
 import { ALLOWED_NETWORKS } from "../config";
+import { SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
+import { SuiSigner } from "x402/shared";
 
 type VerifyRequest = {
   paymentPayload: PaymentPayload;
@@ -46,9 +48,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const isSuiNetwork = SupportedSUINetworks.includes(network);
-
-  if (isSuiNetwork) {
+  if (SupportedSUINetworks.includes(network)) {
     return Response.json(
       {
         isValid: false,
@@ -71,18 +71,6 @@ export async function POST(req: Request) {
       {
         isValid: false,
         invalidReason: "invalid_network",
-      } as VerifyResponse,
-      { status: 400 },
-    );
-  }
-
-  if (isSuiSignerWallet(client as Signer)) {
-    return Response.json(
-      {
-        isValid: false,
-        invalidReason: "unsupported_scheme",
-        error: "Sui network verification is not yet supported",
-        payer: "",
       } as VerifyResponse,
       { status: 400 },
     );
@@ -135,8 +123,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    // @ts-expect-error ConnectedClient union includes SuiJsonRpcClient but we've already filtered Sui signers
-    const valid = await verify(client, paymentPayload, paymentRequirements);
+    const valid = await verify(
+      client as Exclude<ConnectedClient, SuiJsonRpcClient> | Exclude<Signer, SuiSigner>,
+      paymentPayload,
+      paymentRequirements,
+    );
     return Response.json(valid);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
